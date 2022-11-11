@@ -27,11 +27,14 @@ import (
 )
 
 const (
-	extMarkdown    = ".markdown"
 	blockResource  = "resource"
 	keySubCategory = "subcategory"
 	keyDescription = "description"
 	keyPageTitle   = "page_title"
+)
+
+var (
+	extMarkdown = []string{".markdown", ".md"}
 )
 
 var (
@@ -466,15 +469,30 @@ type ScrapeConfiguration struct {
 	ImportXPath string
 }
 
+// is markdown extention
+func (pm *ProviderMetadata) isExtMarkdown(fileExt string) bool {
+	var isMarkDownExt bool
+
+	for _, ext := range extMarkdown {
+		if fileExt == ext {
+			isMarkDownExt = true
+			break
+		}
+	}
+
+	return isMarkDownExt
+}
+
 // ScrapeRepo scrape metadata from the configured Terraform native provider repo
 func (pm *ProviderMetadata) ScrapeRepo(config *ScrapeConfiguration) error {
 	return errors.Wrap(filepath.WalkDir(config.RepoPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to traverse Terraform registry")
 		}
-		if d.IsDir() || filepath.Ext(d.Name()) != extMarkdown {
+		if d.IsDir() || !pm.isExtMarkdown(filepath.Ext(d.Name())) {
 			return nil
 		}
+
 		r := &Resource{}
 		if err := r.scrape(path, config); err != nil {
 			return errors.Wrapf(err, "failed to scrape resource metadata from path: %s", path)
